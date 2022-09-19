@@ -16,11 +16,14 @@ file(GLOB IMGUI_SRC
 )
 
 file(GLOB IMGUI_BACKEND_SRC
-	"imgui_impl_sdl.h"
-	"imgui_impl_sdlrenderer.h"
-	"imgui_impl_sdl.cpp"
-	"imgui_impl_sdlrenderer.cpp"
+	"backends/imgui_impl_sdl.h"
+	"backends/imgui_impl_sdlrenderer.h"
+	"backends/imgui_impl_sdl.cpp"
+	"backends/imgui_impl_sdlrenderer.cpp"
 )
 
 add_library("imgui" STATIC ${IMGUI_SRC} ${IMGUI_BACKEND_SRC})
 target_link_libraries("imgui" PUBLIC SDL2::SDL2-static)
+
+target_include_directories("imgui" PUBLIC "")
+target_include_directories("imgui" PUBLIC "backends")
