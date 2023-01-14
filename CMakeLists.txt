@@ -17,9 +17,11 @@ file(GLOB IMGUI_SRC
 
 file(GLOB IMGUI_BACKEND_SRC
 	"backends/imgui_impl_sdl.h"
-	"backends/imgui_impl_sdlrenderer.h"
 	"backends/imgui_impl_sdl.cpp"
+	"backends/imgui_impl_sdlrenderer.h"
 	"backends/imgui_impl_sdlrenderer.cpp"
+	"backends/imgui_impl_opengl3.h"
+	"backends/imgui_impl_opengl3.cpp"
 )
 
 add_library("imgui" STATIC ${IMGUI_SRC} ${IMGUI_BACKEND_SRC})
