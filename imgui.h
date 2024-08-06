@@ -3083,6 +3083,7 @@ struct ImDrawList
     // - Concave polygon fill is more expensive than convex one: it has O(N^2) complexity. Provided as a convenience fo user but not used by main library.
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
+    IMGUI_API void  AddConvexPolyFilledMultiColor(const ImVec2* points, int num_points, ImU32 col0, ImU32 col1, bool xgrad, bool ygrad);
     IMGUI_API void  AddConcavePolyFilled(const ImVec2* points, int num_points, ImU32 col);
 
     // Image primitives
