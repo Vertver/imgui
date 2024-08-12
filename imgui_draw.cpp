@@ -1064,7 +1064,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
-void ImDrawList::AddConvexPolyFilledMultiColor(const ImVec2* points, const int points_count, ImU32 col0, ImU32 col1, ImU32 col2, ImU32 col3)
+void ImDrawList::AddConvexPolyFilledMultiColor(const ImVec2* points, const int points_count, ImU32 col0, ImU32 col1, ImU32 col2, ImU32 col3, ImDrawBlendMode blending)
 {
     if (points_count < 3 || ((col0 & IM_COL32_A_MASK) == 0 && (col1 & IM_COL32_A_MASK)))
         return;
@@ -1078,80 +1078,97 @@ void ImDrawList::AddConvexPolyFilledMultiColor(const ImVec2* points, const int p
         rect.Add(p1);
     }
 
-    if (Flags & ImDrawListFlags_AntiAliasedFill)
+    // Anti-aliased Fill
+    const float AA_SIZE = _FringeScale;
+    const ImU32 col_trans0 = col0 & ~IM_COL32_A_MASK;
+    const ImU32 col_trans1 = col1 & ~IM_COL32_A_MASK;
+    const ImU32 col_trans2 = col2 & ~IM_COL32_A_MASK;
+    const ImU32 col_trans3 = col3 & ~IM_COL32_A_MASK;
+    const int idx_count = (points_count - 2) * 3 + points_count * 6;
+    const int vtx_count = (points_count * 2);
+    PrimReserve(idx_count, vtx_count);
+
+    // Add indexes for fill
+    unsigned int vtx_inner_idx = _VtxCurrentIdx;
+    unsigned int vtx_outer_idx = _VtxCurrentIdx + 1;
+
+    for (int i = 2; i < points_count; i++)
     {
-        // Anti-aliased Fill
-        const float AA_SIZE = _FringeScale;
-        const ImU32 col_trans0 = col0 & ~IM_COL32_A_MASK;
-        const ImU32 col_trans1 = col1 & ~IM_COL32_A_MASK;
-        const int idx_count = (points_count - 2) * 3 + points_count * 6;
-        const int vtx_count = (points_count * 2);
-        PrimReserve(idx_count, vtx_count);
-
-        // Add indexes for fill
-        unsigned int vtx_inner_idx = _VtxCurrentIdx;
-        unsigned int vtx_outer_idx = _VtxCurrentIdx + 1;
-
-        for (int i = 2; i < points_count; i++)
-        {
-            _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + ((i - 1) << 1)); _IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx + (i << 1));
-            _IdxWritePtr += 3;
-        }
-
-        // Compute normals
-        _Data->TempBuffer.reserve_discard(points_count);
-        ImVec2* temp_normals = _Data->TempBuffer.Data;
-
-        for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
-        {
-            const ImVec2& p0 = points[i0];
-            const ImVec2& p1 = points[i1];
-            float dx = p1.x - p0.x;
-            float dy = p1.y - p0.y;
-            IM_NORMALIZE2F_OVER_ZERO(dx, dy);
-            temp_normals[i0].x = dy;
-            temp_normals[i0].y = -dx;
-        }
-
-        for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
-        {
-            // Average normals
-            const ImVec2& n0 = temp_normals[i0];
-            const ImVec2& n1 = temp_normals[i1];
-            float dm_x = (n0.x + n1.x) * 0.5f;
-            float dm_y = (n0.y + n1.y) * 0.5f;
-            IM_FIXNORMAL2F(dm_x, dm_y);
-            dm_x *= AA_SIZE * 0.5f;
-            dm_y *= AA_SIZE * 0.5f;
-
-            // Add vertices
-            float posx = (points[i1].x - dm_x);
-            float posy = (points[i1].y - dm_y);
-            ImColor color0 = col0;
-            ImColor color1 = col1;
-            ImColor color2 = col2;
-            ImColor color3 = col3;
-            ImColor col = color0;
-            ImColor col_trans = col_trans0;
-
-            float t = (points[i1].x - rect.Min.x) / (rect.Max.x - rect.Min.x);
-            col = ImLerp((ImVec4)color0, (ImVec4)color1, t);
-            col_trans = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, t);
-            t = (points[i1].y - rect.Min.y) / (rect.Max.y - rect.Min.y);
-            col = ImLerp((ImVec4)color2, (ImVec4)color3, t);
-            col_trans = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, t);
-
-            _VtxWritePtr[0].pos.x = posx; _VtxWritePtr[0].pos.y = posy; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
-            _VtxWritePtr[1].pos.x = (points[i1].x + dm_x); _VtxWritePtr[1].pos.y = (points[i1].y + dm_y); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
-            _VtxWritePtr += 2;
-
-            // Add indexes for fringes
-            _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx + (i1 << 1)); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + (i0 << 1)); _IdxWritePtr[2] = (ImDrawIdx)(vtx_outer_idx + (i0 << 1));
-            _IdxWritePtr[3] = (ImDrawIdx)(vtx_outer_idx + (i0 << 1)); _IdxWritePtr[4] = (ImDrawIdx)(vtx_outer_idx + (i1 << 1)); _IdxWritePtr[5] = (ImDrawIdx)(vtx_inner_idx + (i1 << 1));
-            _IdxWritePtr += 6;
-        }
-        _VtxCurrentIdx += (ImDrawIdx)vtx_count;
+        _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + ((i - 1) << 1)); _IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx + (i << 1));
+        _IdxWritePtr += 3;
     }
+
+    // Compute normals
+    _Data->TempBuffer.reserve_discard(points_count);
+    ImVec2* temp_normals = _Data->TempBuffer.Data;
+
+    for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
+    {
+        const ImVec2& p0 = points[i0];
+        const ImVec2& p1 = points[i1];
+        float dx = p1.x - p0.x;
+        float dy = p1.y - p0.y;
+        IM_NORMALIZE2F_OVER_ZERO(dx, dy);
+        temp_normals[i0].x = dy;
+        temp_normals[i0].y = -dx;
+    }
+
+    for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
+    {
+        // Average normals
+        const ImVec2& n0 = temp_normals[i0];
+        const ImVec2& n1 = temp_normals[i1];
+        float dm_x = (n0.x + n1.x) * 0.5f;
+        float dm_y = (n0.y + n1.y) * 0.5f;
+        IM_FIXNORMAL2F(dm_x, dm_y);
+        dm_x *= AA_SIZE * 0.5f;
+        dm_y *= AA_SIZE * 0.5f;
+
+        // Add vertices
+        float posx = (points[i1].x - dm_x);
+        float posy = (points[i1].y - dm_y);
+        float tx = (points[i1].x - rect.Min.x) / (rect.Max.x - rect.Min.x);
+        float ty = (points[i1].y - rect.Min.y) / (rect.Max.y - rect.Min.y);
+        ImColor colx = ImLerp((ImVec4)(ImColor)col0, (ImVec4)(ImColor)col1, tx);
+        ImColor coly = ImLerp((ImVec4)(ImColor)col2, (ImVec4)(ImColor)col3, ty);
+        ImColor col_transx = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, tx);
+        ImColor col_transy = ImLerp((ImVec4)(ImColor)col_trans2, (ImVec4)(ImColor)col_trans3, ty);
+        ImColor col = colx;
+        ImColor col_trans = col_transx;
+        switch (blending) {
+        case ImDrawBlendMode_Additive:
+            col = (ImVec4)colx + (ImVec4)coly;
+            col_trans = (ImVec4)col_transx + (ImVec4)col_transy;
+            break;
+        case ImDrawBlendMode_Subtractive:
+            col = (ImVec4)colx - (ImVec4)coly;
+            col_trans = (ImVec4)col_transx - (ImVec4)col_transy;
+            break;
+        case ImDrawBlendMode_EqualFirst:
+            col = colx;
+            col_trans = col_transx;
+            break;
+        case ImDrawBlendMode_EqualSecond:
+            col = coly;
+            col_trans = col_transy;
+            break;
+        case ImDrawBlendMode_Average:
+        default:
+            col = ((ImVec4)colx + (ImVec4)coly) * ImVec4(0.5f, 0.5f, 0.5f, 0.5f);
+            col_trans = ((ImVec4)col_transx + (ImVec4)col_transy) * ImVec4(0.5f, 0.5f, 0.5f, 0.5f);
+            break;
+        }
+
+        _VtxWritePtr[0].pos.x = posx; _VtxWritePtr[0].pos.y = posy; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
+        _VtxWritePtr[1].pos.x = (points[i1].x + dm_x); _VtxWritePtr[1].pos.y = (points[i1].y + dm_y); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
+        _VtxWritePtr += 2;
+
+        // Add indexes for fringes
+        _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx + (i1 << 1)); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + (i0 << 1)); _IdxWritePtr[2] = (ImDrawIdx)(vtx_outer_idx + (i0 << 1));
+        _IdxWritePtr[3] = (ImDrawIdx)(vtx_outer_idx + (i0 << 1)); _IdxWritePtr[4] = (ImDrawIdx)(vtx_outer_idx + (i1 << 1)); _IdxWritePtr[5] = (ImDrawIdx)(vtx_inner_idx + (i1 << 1));
+        _IdxWritePtr += 6;
+    }
+    _VtxCurrentIdx += (ImDrawIdx)vtx_count;
 }
 
 void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)

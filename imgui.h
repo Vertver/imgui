@@ -221,6 +221,7 @@ typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A 
 //   - In Visual Studio w/ Visual Assist installed: ALT+G ("VAssistX.GoToImplementation") can also follow symbols inside comments.
 //   - In VS Code, CLion, etc.: CTRL+click can follow symbols inside comments.
 typedef int ImDrawFlags;            // -> enum ImDrawFlags_          // Flags: for ImDrawList functions
+typedef int ImDrawBlendMode;        // -> enum ImDrawBlendMode_      // Flags: for ImDrawList functions
 typedef int ImDrawListFlags;        // -> enum ImDrawListFlags_      // Flags: for ImDrawList instance
 typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas build
 typedef int ImGuiBackendFlags;      // -> enum ImGuiBackendFlags_    // Flags: for io.BackendFlags
@@ -3127,6 +3128,15 @@ enum ImDrawListFlags_
     ImDrawListFlags_AllowVtxOffset          = 1 << 3,  // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
 };
 
+enum ImDrawBlendMode_
+{
+    ImDrawBlendMode_Average,
+    ImDrawBlendMode_Additive,
+    ImDrawBlendMode_Subtractive,
+    ImDrawBlendMode_EqualFirst,
+    ImDrawBlendMode_EqualSecond,
+};
+
 // Draw command list
 // This is the low-level list of polygons that ImGui:: functions are filling. At the end of the frame,
 // all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
@@ -3200,7 +3210,7 @@ struct ImDrawList
     // - Concave polygon fill is more expensive than convex one: it has O(N^2) complexity. Provided as a convenience fo user but not used by main library.
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
-    IMGUI_API void  AddConvexPolyFilledMultiColor(const ImVec2* points, int num_points, ImU32 col0, ImU32 col1, ImU32 col2, ImU32 col3);
+    IMGUI_API void  AddConvexPolyFilledMultiColor(const ImVec2* points, int num_points, ImU32 col0, ImU32 col1, ImU32 col2, ImU32 col3, ImDrawBlendMode blending);
     IMGUI_API void  AddConcavePolyFilled(const ImVec2* points, int num_points, ImU32 col);
 
     // Image primitives
