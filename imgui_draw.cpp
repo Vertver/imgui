@@ -1064,7 +1064,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
-void ImDrawList::AddConvexPolyFilledMultiColor(const ImVec2* points, const int points_count, ImU32 col0, ImU32 col1, bool xgrad, bool ygrad)
+void ImDrawList::AddConvexPolyFilledMultiColor(const ImVec2* points, const int points_count, ImU32 col0, ImU32 col1, ImU32 col2, ImU32 col3)
 {
     if (points_count < 3 || ((col0 & IM_COL32_A_MASK) == 0 && (col1 & IM_COL32_A_MASK)))
         return;
@@ -1129,20 +1129,18 @@ void ImDrawList::AddConvexPolyFilledMultiColor(const ImVec2* points, const int p
             float posy = (points[i1].y - dm_y);
             ImColor color0 = col0;
             ImColor color1 = col1;
+            ImColor color2 = col2;
+            ImColor color3 = col3;
             ImColor col = color0;
             ImColor col_trans = col_trans0;
-            if (xgrad) {
-                float t = (points[i1].x - rect.Min.x) / (rect.Max.x - rect.Min.x);
-                col = ImLerp((ImVec4)color0, (ImVec4)color1, t);
-                col_trans = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, t);
-            }
-            else if (ygrad) {
-                float t = (points[i1].y - rect.Min.y) / (rect.Max.y - rect.Min.y);
-                col = ImLerp((ImVec4)color0, (ImVec4)color1, t);
-                col_trans = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, t);
-            }
 
-            //ImLerp(color0)
+            float t = (points[i1].x - rect.Min.x) / (rect.Max.x - rect.Min.x);
+            col = ImLerp((ImVec4)color0, (ImVec4)color1, t);
+            col_trans = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, t);
+            t = (points[i1].y - rect.Min.y) / (rect.Max.y - rect.Min.y);
+            col = ImLerp((ImVec4)color2, (ImVec4)color3, t);
+            col_trans = ImLerp((ImVec4)(ImColor)col_trans0, (ImVec4)(ImColor)col_trans1, t);
+
             _VtxWritePtr[0].pos.x = posx; _VtxWritePtr[0].pos.y = posy; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
             _VtxWritePtr[1].pos.x = (points[i1].x + dm_x); _VtxWritePtr[1].pos.y = (points[i1].y + dm_y); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
             _VtxWritePtr += 2;
